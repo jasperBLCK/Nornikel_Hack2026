@@ -1,0 +1,86 @@
+{
+  "realm": "hydrax",
+  "enabled": true,
+  "displayName": "HydraX Knowledge Map",
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": false,
+  "loginWithEmailAllowed": true,
+  "resetPasswordAllowed": true,
+  "bruteForceProtected": true,
+  "failureFactor": 5,
+  "waitIncrementSeconds": 60,
+  "maxFailureWaitSeconds": 900,
+  "accessTokenLifespan": 1800,
+  "ssoSessionIdleTimeout": 28800,
+  "defaultRoles": ["external_partner"],
+  "roles": {
+    "realm": [
+      {"name": "admin", "description": "Администратор системы"},
+      {"name": "project_manager", "description": "Руководитель проекта"},
+      {"name": "analyst", "description": "Аналитик"},
+      {"name": "researcher", "description": "Исследователь"},
+      {"name": "external_partner", "description": "Внешний партнёр"}
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "hydrax-app",
+      "name": "HydraX Web App",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "redirectUris": ["http://localhost:8000/*"],
+      "webOrigins": ["http://localhost:8000"],
+      "protocol": "openid-connect",
+      "fullScopeAllowed": true
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "firstName": "Администратор",
+      "lastName": "Системы",
+      "email": "admin@hydrax.local",
+      "credentials": [{"type": "password", "value": "admin123", "temporary": false}],
+      "realmRoles": ["admin"]
+    },
+    {
+      "username": "manager",
+      "enabled": true,
+      "firstName": "Пётр",
+      "lastName": "Руководитель",
+      "email": "manager@hydrax.local",
+      "credentials": [{"type": "password", "value": "manager123", "temporary": false}],
+      "realmRoles": ["project_manager"]
+    },
+    {
+      "username": "analyst",
+      "enabled": true,
+      "firstName": "Анна",
+      "lastName": "Аналитик",
+      "email": "analyst@hydrax.local",
+      "credentials": [{"type": "password", "value": "analyst123", "temporary": false}],
+      "realmRoles": ["analyst"]
+    },
+    {
+      "username": "researcher",
+      "enabled": true,
+      "firstName": "Иван",
+      "lastName": "Исследователь",
+      "email": "researcher@hydrax.local",
+      "credentials": [{"type": "password", "value": "researcher123", "temporary": false}],
+      "realmRoles": ["researcher"]
+    },
+    {
+      "username": "partner",
+      "enabled": true,
+      "firstName": "Внешний",
+      "lastName": "Партнёр",
+      "email": "partner@geotech.example",
+      "credentials": [{"type": "password", "value": "partner123", "temporary": false}],
+      "realmRoles": ["external_partner"]
+    }
+  ]
+}

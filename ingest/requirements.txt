@@ -1,0 +1,15 @@
+# --- PDF / DOCX / TXT ingestion ---
+PyMuPDF>=1.24.0          # fast PDF text-layer extraction
+python-docx>=1.1.0       # DOCX headings/paragraphs/tables
+
+# --- OCR (scanned PDFs) ---
+# Tesseract binary + 'rus' language pack must be installed on the OS:
+#   Windows: choco install tesseract   (then download rus traineddata)
+#   Ubuntu : apt-get install tesseract-ocr tesseract-ocr-rus
+pytesseract>=0.3.10      # Python wrapper (optional, currently using subprocess)
+Pillow>=10.0.0           # image handling
+
+# --- XLS/XLSX extraction ---
+# Legacy .xls and .doc need LibreOffice on the OS:
+#   Ubuntu: apt-get install libreoffice-writer libreoffice-calc antiword unrar-free p7zip-full
+openpyxl>=3.1.0          # XLSX sheets → text

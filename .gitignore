@@ -1,0 +1,12 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+corpus/
+hydrax_out/
+INFO_DATA/
+*.sqlite
+*.ndjson
+qdrant_data/
+node_modules/
+frontend/dist/

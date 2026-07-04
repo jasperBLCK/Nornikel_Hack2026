@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HydraX — Карта знаний R&D</title>
+<script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+<style>
+  :root {
+    --blue: #0077C8; --cyan: #00A9E0; --dark: #060D14; --panel: #0D1720;
+    --panel2: #111E2A; --border: #1D2F3F; --text: #E8F0F7; --muted: #7E93A6;
+    --accent: #37C4FF; --green: #2ED573; --amber: #FFB020;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Segoe UI', -apple-system, Roboto, sans-serif;
+    background: var(--dark); color: var(--text); min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse 900px 500px at 70% -10%, rgba(0,119,200,.18), transparent),
+      radial-gradient(ellipse 700px 400px at 10% 110%, rgba(0,169,224,.08), transparent);
+  }
+  /* ---------- header ---------- */
+  header {
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: blur(14px); background: rgba(6,13,20,.82);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 36px; display: flex; align-items: center; gap: 15px;
+  }
+  .logo {
+    width: 38px; height: 38px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--blue), var(--cyan));
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 17px; color: #fff;
+    box-shadow: 0 0 24px rgba(0,150,220,.45);
+  }
+  header h1 { font-size: 17px; font-weight: 650; letter-spacing: .4px; }
+  header .sub { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+  .stats { margin-left: auto; display: flex; gap: 26px; }
+  .stat { text-align: right; }
+  .stat .v { font-size: 17px; font-weight: 700; color: var(--accent);
+             font-variant-numeric: tabular-nums; }
+  .stat .k { font-size: 10.5px; color: var(--muted); text-transform: uppercase;
+             letter-spacing: .8px; }
+  /* ---------- hero / search ---------- */
+  main { max-width: 1240px; margin: 0 auto; padding: 40px 26px; }
+  .hero { text-align: center; margin: 24px 0 30px; }
+  .hero h2 {
+    font-size: 30px; font-weight: 750; letter-spacing: -.3px;
+    background: linear-gradient(90deg, #fff, var(--accent));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero p { color: var(--muted); margin-top: 8px; font-size: 14.5px; }
+  .searchwrap { max-width: 860px; margin: 0 auto 12px; position: relative; }
+  .searchbar {
+    display: flex; gap: 10px; padding: 6px;
+    background: var(--panel); border: 1.5px solid var(--border);
+    border-radius: 16px; transition: border .2s, box-shadow .2s;
+  }
+  .searchbar:focus-within {
+    border-color: var(--blue); box-shadow: 0 0 0 4px rgba(0,119,200,.15);
+  }
+  .searchbar input {
+    flex: 1; padding: 13px 16px; font-size: 15px; border: 0; outline: none;
+    background: transparent; color: var(--text);
+  }
+  .searchbar input::placeholder { color: #4E6478; }
+  .searchbar button {
+    padding: 13px 30px; font-size: 14.5px; font-weight: 650;
+    background: linear-gradient(135deg, var(--blue), var(--cyan));
+    color: #fff; border: 0; border-radius: 11px; cursor: pointer;
+    transition: filter .15s, transform .1s;
+  }
+  .searchbar button:hover { filter: brightness(1.15); }
+  .searchbar button:active { transform: scale(.97); }
+  .searchbar button:disabled { filter: grayscale(.6); cursor: wait; }
+  .examples {
+    max-width: 860px; margin: 0 auto 8px; display: flex; flex-wrap: wrap;
+    gap: 8px; justify-content: center;
+  }
+  .chip {
+    font-size: 12.5px; padding: 7px 14px; border-radius: 20px; cursor: pointer;
+    background: var(--panel); border: 1px solid var(--border); color: var(--muted);
+    transition: all .15s;
+  }
+  .chip:hover { border-color: var(--blue); color: var(--accent); }
+  .history { max-width: 860px; margin: 6px auto 0; font-size: 12px;
+             color: var(--muted); text-align: center; }
+  .history span { color: var(--accent); cursor: pointer; margin: 0 8px; }
+  /* ---------- results ---------- */
+  .grid { display: grid; grid-template-columns: minmax(0,1fr) 400px; gap: 20px;
+          margin-top: 34px; }
+  @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 15px; padding: 22px; margin-bottom: 20px;
+    animation: rise .35s ease both;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+  .card h3 {
+    font-size: 11.5px; text-transform: uppercase; letter-spacing: 1.3px;
+    color: var(--muted); margin-bottom: 15px; font-weight: 650;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card h3::before { content: ''; width: 8px; height: 8px; border-radius: 2px;
+    background: linear-gradient(135deg, var(--blue), var(--cyan)); }
+  /* answer */
+  #answer { font-size: 14.8px; line-height: 1.7; }
+  #answer h1, #answer h2, #answer h3 { margin: 14px 0 8px; color: #fff; }
+  #answer h1 { font-size: 19px; } #answer h2 { font-size: 17px; }
+  #answer h3 { font-size: 15px; text-transform: none; letter-spacing: 0; }
+  #answer h3::before { display: none; }
+  #answer ul, #answer ol { margin: 8px 0 8px 22px; }
+  #answer li { margin: 4px 0; }
+  #answer strong { color: #fff; }
+  #answer p { margin: 8px 0; }
+  #answer .cite {
+    display: inline-block; font-size: 11px; font-weight: 700;
+    color: var(--accent); background: rgba(0,150,220,.14);
+    padding: 1px 7px; border-radius: 9px; margin: 0 2px; cursor: pointer;
+    border: 1px solid rgba(0,150,220,.3);
+  }
+  /* sources */
+  .chunk {
+    border: 1px solid var(--border); border-left: 3px solid var(--blue);
+    padding: 12px 15px; margin-bottom: 11px; background: var(--panel2);
+    border-radius: 10px; cursor: pointer; transition: border-color .15s;
+  }
+  .chunk:hover { border-color: var(--cyan); }
+  .chunk.hl { border-color: var(--amber); box-shadow: 0 0 0 2px rgba(255,176,32,.25); }
+  .chunk .fn { font-size: 12.5px; font-weight: 650; color: #B9D4E8;
+               display: flex; align-items: center; gap: 8px; }
+  .chunk .num {
+    font-size: 10.5px; font-weight: 800; color: var(--accent);
+    background: rgba(0,150,220,.14); padding: 1px 8px; border-radius: 9px;
+    border: 1px solid rgba(0,150,220,.3);
+  }
+  .chunk .score { margin-left: auto; font-size: 10.5px; color: var(--muted); }
+  .bar { height: 3px; border-radius: 2px; background: var(--border);
+         margin-top: 7px; overflow: hidden; }
+  .bar i { display: block; height: 100%; border-radius: 2px;
+           background: linear-gradient(90deg, var(--blue), var(--cyan)); }
+  .chunk .tx { font-size: 12.8px; color: var(--muted); margin-top: 8px;
+               max-height: 62px; overflow: hidden; line-height: 1.55;
+               transition: max-height .25s; }
+  .chunk.open .tx { max-height: 800px; color: #C4D6E4; }
+  /* entities */
+  .tags { display: flex; flex-wrap: wrap; gap: 7px; }
+  .tag { font-size: 12px; padding: 5px 13px; border-radius: 20px;
+         background: var(--panel2); border: 1px solid var(--border); }
+  .tag b { font-weight: 650; margin-right: 5px; }
+  .tag.materials b { color: var(--cyan); }
+  .tag.processes b { color: var(--green); }
+  .tag.equipment b { color: var(--amber); }
+  .tag.conditions b { color: #C792EA; }
+  /* graph */
+  #graph { height: 400px; border-radius: 10px; background: var(--panel2);
+           border: 1px solid var(--border); }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; }
+  .legend span { font-size: 11px; color: var(--muted); display: flex;
+                 align-items: center; gap: 5px; }
+  .legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .fact { font-size: 12.8px; padding: 8px 0; border-bottom: 1px solid var(--border);
+          line-height: 1.5; }
+  .fact:last-child { border: 0; }
+  .fact .rel { color: var(--accent); font-weight: 700; font-size: 10.5px;
+               letter-spacing: .5px; }
+  .empty { color: var(--muted); font-size: 13px; padding: 6px 0; }
+  /* skeleton */
+  .skel { border-radius: 8px; background: linear-gradient(90deg,
+          var(--panel2) 25%, #16283A 50%, var(--panel2) 75%);
+          background-size: 200% 100%; animation: shimmer 1.4s infinite; }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+  footer { text-align: center; padding: 26px; color: #40566B; font-size: 12px;
+           border-top: 1px solid var(--border); margin-top: 30px; }
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: #2A1620; border: 1px solid #7A2E42; color: #FFB4C4;
+    padding: 12px 22px; border-radius: 12px; font-size: 13.5px; z-index: 99;
+    display: none;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">Hx</div>
+  <div>
+    <h1>HydraX <span style="color:var(--muted);font-weight:400">·</span> Карта знаний R&D</h1>
+    <div class="sub">Горно-металлургический корпус · Норникель Hack 2026</div>
+  </div>
+  <div class="stats" id="stats"></div>
+</header>
+
+<main>
+  <div class="hero">
+    <h2>Спросите — корпус ответит</h2>
+    <p>Семантический поиск по 30 000+ фрагментам отчётов и статей · граф знаний · ответы с цитатами</p>
+  </div>
+
+  <div class="searchwrap">
+    <div class="searchbar">
+      <input id="q" placeholder="Какие методы обессоливания воды подходят при сульфатах 200–300 мг/л?"
+             onkeydown="if(event.key==='Enter')ask()">
+      <button id="btn" onclick="ask()">Найти</button>
+    </div>
+  </div>
+  <div class="examples">
+    <div class="chip" onclick="fill(this)">циркуляция католита при электроэкстракции никеля</div>
+    <div class="chip" onclick="fill(this)">распределение Au, Ag и МПГ между штейном и шлаком</div>
+    <div class="chip" onclick="fill(this)">кучное выщелачивание в холодном климате</div>
+    <div class="chip" onclick="fill(this)">способы удаления SO₂ из отходящих газов</div>
+    <div class="chip" onclick="fill(this)">закачка шахтных вод в глубокие горизонты</div>
+  </div>
+  <div class="history" id="history"></div>
+
+  <div class="grid" id="results" style="display:none">
+    <div>
+      <div class="card">
+        <h3>Ответ ассистента</h3>
+        <div id="answer"></div>
+      </div>
+      <div class="card">
+        <h3>Источники <span id="srccount" style="color:var(--accent)"></span></h3>
+        <div id="chunks"></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h3>Распознанные сущности</h3>
+        <div class="tags" id="entities"></div>
+      </div>
+      <div class="card">
+        <h3>Граф знаний</h3>
+        <div id="graph"></div>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div class="card">
+        <h3>Факты графа</h3>
+        <div id="facts"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid" id="skeleton" style="display:none">
+    <div>
+      <div class="card"><h3>Ответ ассистента</h3>
+        <div class="skel" style="height:16px;margin-bottom:10px"></div>
+        <div class="skel" style="height:16px;width:85%;margin-bottom:10px"></div>
+        <div class="skel" style="height:16px;width:70%;margin-bottom:10px"></div>
+        <div class="skel" style="height:16px;width:90%"></div>
+      </div>
+      <div class="card"><h3>Источники</h3>
+        <div class="skel" style="height:64px;margin-bottom:10px"></div>
+        <div class="skel" style="height:64px;margin-bottom:10px"></div>
+        <div class="skel" style="height:64px"></div>
+      </div>
+    </div>
+    <div>
+      <div class="card"><h3>Граф знаний</h3>
+        <div class="skel" style="height:300px"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+<footer>HydraX Knowledge System · локальное извлечение + векторный поиск + Claude · LLM вызывается только на запрос</footer>
+
+<script>
+const KIND_RU = {materials:'материал', processes:'процесс', equipment:'оборудование', conditions:'условие'};
+const GROUP_COLORS = {Material:'#00A9E0', Process:'#2ED573', Equipment:'#FFB020',
+                      Parameter:'#C792EA', Condition:'#FF7A9E', Experiment:'#8899AA'};
+const GROUP_RU = {Material:'материал', Process:'процесс', Equipment:'оборудование',
+                  Parameter:'параметр', Condition:'условие', Experiment:'эксперимент'};
+let history = JSON.parse(localStorage.getItem('hx_history')||'[]');
+
+function fill(el){ document.getElementById('q').value = el.textContent; ask(); }
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.display = 'block';
+  setTimeout(()=>t.style.display='none', 5000);
+}
+function esc(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+
+async function loadStats(){
+  try {
+    const s = await fetch('/api/stats').then(r=>r.json());
+    const el = document.getElementById('stats');
+    el.innerHTML = `
+      <div class="stat"><div class="v">${(s.chunks||0).toLocaleString('ru')}</div><div class="k">фрагментов</div></div>
+      <div class="stat"><div class="v">${(s.nodes||0).toLocaleString('ru')}</div><div class="k">узлов графа</div></div>
+      <div class="stat"><div class="v">${(s.relations||0).toLocaleString('ru')}</div><div class="k">связей</div></div>`;
+  } catch(e) {}
+}
+loadStats();
+
+function renderHistory(){
+  const h = document.getElementById('history');
+  if(!history.length){ h.innerHTML=''; return; }
+  h.innerHTML = 'Недавние: ' + history.slice(0,4).map(q=>
+    `<span onclick="document.getElementById('q').value=this.textContent;ask()">${esc(q)}</span>`).join('');
+}
+renderHistory();
+
+async function ask(){
+  const q = document.getElementById('q').value.trim();
+  if(!q) return;
+  const btn = document.getElementById('btn');
+  btn.disabled = true; btn.textContent = 'Ищу…';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('skeleton').style.display = 'grid';
+  try {
+    const [ans, graph] = await Promise.all([
+      fetch('/api/answer', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({query:q, top_k:8})}).then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }),
+      fetch('/api/graph', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({query:q})}).then(r=>r.ok?r.json():{nodes:[],edges:[]}),
+    ]);
+    history = [q, ...history.filter(x=>x!==q)].slice(0,8);
+    localStorage.setItem('hx_history', JSON.stringify(history));
+    renderHistory();
+    render(ans, graph);
+  } catch(e) {
+    toast('Ошибка запроса: ' + e.message + ' — проверьте, что сервер запущен');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Найти';
+    document.getElementById('skeleton').style.display = 'none';
+  }
+}
+
+function typewriter(el, html){
+  // reveal blocks progressively for a "streaming" feel
+  el.innerHTML = html;
+  const blocks = el.querySelectorAll('p, li, h1, h2, h3, ul, ol');
+  blocks.forEach((b,i)=>{
+    b.style.opacity = 0; b.style.transition = 'opacity .3s';
+    setTimeout(()=>{ b.style.opacity = 1; }, 60*i);
+  });
+}
+
+function render(data, graph){
+  document.getElementById('results').style.display = 'grid';
+
+  let md = marked.parse(data.answer||'');
+  md = md.replace(/\[(\d+)\]/g, '<span class="cite" onclick="jump($1)">[$1]</span>');
+  typewriter(document.getElementById('answer'), md);
+
+  document.getElementById('srccount').textContent = data.chunks.length ? `· ${data.chunks.length}` : '';
+  const chunksEl = document.getElementById('chunks');
+  chunksEl.innerHTML = data.chunks.length ? '' : '<div class="empty">Ничего не найдено</div>';
+  const maxScore = Math.max(...data.chunks.map(c=>c.score||0), .001);
+  data.chunks.forEach((c,i)=>{
+    const div = document.createElement('div');
+    div.className = 'chunk'; div.id = 'src'+(i+1);
+    const pct = Math.round((c.score||0)/maxScore*100);
+    div.innerHTML = `<div class="fn"><span class="num">${i+1}</span>${esc(c.filename||c.document_id)}
+                       <span class="score">релевантность ${(c.score||0).toFixed(2)}</span></div>
+                     <div class="bar"><i style="width:${pct}%"></i></div>
+                     <div class="tx">${esc(c.text)}</div>`;
+    div.onclick = ()=>div.classList.toggle('open');
+    chunksEl.appendChild(div);
+  });
+
+  const entEl = document.getElementById('entities');
+  entEl.innerHTML = '';
+  let any = false;
+  for(const [kind, items] of Object.entries(data.entities||{})){
+    items.forEach(name=>{
+      any = true;
+      entEl.insertAdjacentHTML('beforeend',
+        `<div class="tag ${kind}"><b>${KIND_RU[kind]||kind}</b>${esc(name)}</div>`);
+    });
+  }
+  if(!any) entEl.innerHTML = '<div class="empty">Сущности не распознаны</div>';
+
+  const factsEl = document.getElementById('facts');
+  factsEl.innerHTML = (data.facts&&data.facts.length) ? '' : '<div class="empty">Граф пуст — запустите Stage 4 (Neo4j)</div>';
+  (data.facts||[]).slice(0,15).forEach(f=>{
+    factsEl.insertAdjacentHTML('beforeend',
+      `<div class="fact">${esc(f.source)} <span class="rel">${esc(f.relation)}</span> ${esc(f.target)}</div>`);
+  });
+
+  drawGraph(graph);
+}
+
+function jump(n){
+  const el = document.getElementById('src'+n);
+  if(!el) return;
+  el.scrollIntoView({behavior:'smooth', block:'center'});
+  el.classList.add('hl','open');
+  setTimeout(()=>el.classList.remove('hl'), 2500);
+}
+
+function drawGraph(graph){
+  const nodes = (graph.nodes||[]).map(n=>({
+    ...n, shape:'dot', size: 13,
+    color:{background: GROUP_COLORS[n.group]||'#8899AA', border:'#0D1720',
+           highlight:{background:'#fff', border: GROUP_COLORS[n.group]||'#8899AA'}},
+    font:{size:11.5, color:'#C4D6E4', strokeWidth:0}
+  }));
+  const edges = (graph.edges||[]).map(e=>({
+    ...e, arrows:{to:{scaleFactor:.5}}, color:{color:'#2A425A', highlight:'#37C4FF'},
+    font:{size:8.5, color:'#5E778A', align:'middle', strokeWidth:0}, width:1.2
+  }));
+  const gEl = document.getElementById('graph');
+  if(!nodes.length){
+    gEl.innerHTML = '<div class="empty" style="padding:30px;text-align:center">Нет данных графа для этого запроса.<br>Запустите Neo4j + Stage 4 для визуализации.</div>';
+    document.getElementById('legend').innerHTML = '';
+    return;
+  }
+  gEl.innerHTML = '';
+  new vis.Network(gEl, {nodes, edges},
+    {physics:{stabilization:{iterations:150}, barnesHut:{gravitationalConstant:-4200, springLength:110}},
+     interaction:{hover:true}});
+  const groups = [...new Set((graph.nodes||[]).map(n=>n.group))];
+  document.getElementById('legend').innerHTML = groups.map(g=>
+    `<span><i style="background:${GROUP_COLORS[g]||'#8899AA'}"></i>${GROUP_RU[g]||g}</span>`).join('');
+}
+</script>
+</body>
+</html>

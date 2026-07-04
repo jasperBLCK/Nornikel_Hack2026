@@ -1,0 +1,8 @@
+# Stage 5: hybrid retrieval + web app
+qdrant-client[fastembed]>=1.9.0   # embedded vector DB + ONNX multilingual embeddings
+fastapi>=0.110.0
+uvicorn>=0.29.0
+httpx>=0.27.0
+neo4j>=5.19.0
+PyJWT>=2.8
+cryptography>=42

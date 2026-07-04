@@ -1,0 +1,115 @@
+services:
+  # Разовый джоб: прогоняет пайплайн (Stage 1–5) против ЭТОГО ЖЕ neo4j.
+  # Инкрементален: каждая стадия пропускается, если её артефакт в hydrax_out уже
+  # актуален (и граф в Neo4j не пуст) — повторный запуск завершается за секунды.
+  # Полный пересчёт: HYDRAX_FORCE=1 docker compose run --rm ingest
+  # (app при этом остановить — embedded Qdrant блокирует папку:
+  #  docker compose stop app && HYDRAX_FORCE=1 docker compose run --rm ingest && docker compose start app)
+  ingest:
+    build: .
+    command: sh -c "python prepare_corpus.py --input /app/corpus && python run_pipeline.py"
+    environment:
+      HYDRAX_INPUT: /app/corpus
+      HYDRAX_OUTPUT: /data/hydrax_out
+      HYDRAX_NEO4J_URI: bolt://neo4j:7687
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-testpass}
+      HYDRAX_EXTRACTOR: ${HYDRAX_EXTRACTOR:-local}
+      HYDRAX_FORCE: ${HYDRAX_FORCE:-0}
+    volumes:
+      - ./corpus:/app/corpus
+      - ./hydrax_out:/data/hydrax_out
+      - model_cache:/root/.cache
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      QDRANT_PATH: /data/hydrax_out/qdrant_data
+      SESSIONS_DB: /data/hydrax_out/sessions.db
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-testpass}
+      # Yandex AI Studio (основной провайдер)
+      YANDEX_API_KEY: ${YANDEX_API_KEY:-AQVNwPZZrmixwqCCpILASfaGxO24W_P_UMnVVaCV}
+      YANDEX_FOLDER_ID: ${YANDEX_FOLDER_ID:-b1ggusvist6c2sia1dno}
+      YANDEX_MODEL: ${YANDEX_MODEL:-qwen3-235b-a22b-fp8/latest}
+      # Anthropic (резервный провайдер, опционально)
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-} #cr_03e99972a534988d1aeaf973539eb3ef69cf004019a9587a32b27fbdd06c1062
+      ANTHROPIC_BASE_URL: ${ANTHROPIC_BASE_URL:-} #https://api.tkbk.io/claude
+      ANSWER_MODEL: ${ANSWER_MODEL:-claude-sonnet-5}
+      LLM_PROVIDER: ${LLM_PROVIDER:-}
+      # Авторизация: Keycloak (OIDC). Без KEYCLOAK_URL — локальный fallback-режим.
+      KEYCLOAK_URL: ${KEYCLOAK_URL:-http://keycloak:8080}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-hydrax}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-hydrax-app}
+      AUTH_SECRET: ${AUTH_SECRET:-hydrax-dev-secret-change-me}
+      AUDIT_DB: /data/hydrax_out/audit.db
+    volumes:
+      - ./hydrax_out:/data/hydrax_out
+      - model_cache:/root/.cache
+    depends_on:
+      neo4j:
+        condition: service_healthy
+      ingest:
+        condition: service_completed_successfully
+      keycloak:
+        condition: service_started
+
+  neo4j:
+    image: neo4j:5
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-testpass}
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: start-dev --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD:-kcadmin123}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD:-kcdbpass}
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME_STRICT: "false"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import:ro
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+
+  keycloak-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KC_DB_PASSWORD:-kcdbpass}
+    volumes:
+      - keycloak_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  neo4j_data:
+  model_cache:
+  keycloak_db_data:

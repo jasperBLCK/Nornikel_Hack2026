@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+@theme {
+  --color-nn-dark: #F5F9FD;
+  --color-nn-panel: #FFFFFF;
+  --color-nn-panel2: #EDF4FB;
+  --color-nn-border: #D9E6F2;
+  --color-nn-text: #102A43;
+  --color-nn-muted: #5D7488;
+  --color-nn-blue: #0077C8;
+  --color-nn-cyan: #00A9E0;
+  --color-nn-accent: #0077C8;
+  --color-nn-green: #12A150;
+  --color-nn-amber: #D97706;
+  --color-nn-purple: #7C3AED;
+  --color-nn-pink: #DB2777;
+}
+
+html { background: var(--color-nn-dark); }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: var(--color-nn-text);
+  background:
+    radial-gradient(1100px 500px at 15% -10%, rgba(0, 119, 200, .08), transparent 60%),
+    radial-gradient(900px 420px at 90% 0%, rgba(0, 169, 224, .06), transparent 55%),
+    var(--color-nn-dark);
+  min-height: 100vh;
+}
+
+.card {
+  @apply bg-nn-panel border border-nn-border rounded-2xl p-5;
+  box-shadow: 0 4px 20px rgba(16, 58, 96, .07);
+}
+
+.card-title {
+  @apply text-[11px] font-bold tracking-[.14em] uppercase text-nn-muted mb-3 flex items-center gap-2;
+}
+.card-title::before {
+  content: "";
+  @apply inline-block w-2 h-2 rounded-[3px] bg-nn-cyan;
+}
+
+.md-answer h1 { @apply text-xl font-bold mt-4 mb-2 text-nn-text; }
+.md-answer h2 { @apply text-lg font-bold mt-4 mb-2 text-nn-text; }
+.md-answer h3 { @apply text-base font-bold mt-3 mb-1.5 text-nn-text; }
+.md-answer p { @apply my-2 leading-relaxed; }
+.md-answer ul, .md-answer ol { @apply my-2 pl-6 space-y-1; }
+.md-answer ul { list-style: disc; }
+.md-answer ol { list-style: decimal; }
+.md-answer strong { @apply text-nn-text; }
+.md-answer code { @apply bg-nn-panel2 px-1.5 py-0.5 rounded text-nn-accent text-[90%]; }
+.md-answer table { @apply w-full my-3 text-sm border-collapse; }
+.md-answer th, .md-answer td { @apply border border-nn-border px-2 py-1 text-left; }
+.md-answer th { @apply bg-nn-panel2; }
+
+.cite {
+  @apply inline-flex items-center justify-center min-w-6 px-1.5 py-0.5 mx-0.5 rounded-md
+    bg-nn-blue/20 text-nn-accent text-[11px] font-bold cursor-pointer border border-nn-blue/40
+    hover:bg-nn-blue/40 transition-colors align-baseline;
+}
+
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton {
+  @apply rounded-lg;
+  background: linear-gradient(90deg, #E6EEF6 25%, #F2F7FC 50%, #E6EEF6 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: .4; }
+  50% { opacity: 1; }
+}
+.cursor-blink { animation: pulse-glow 1s infinite; }
+
+@keyframes flash {
+  0% { border-color: var(--color-nn-amber); box-shadow: 0 0 0 3px rgba(255, 176, 32, .25); }
+  100% { border-color: var(--color-nn-border); box-shadow: none; }
+}
+.flash { animation: flash 2s ease-out; }

@@ -1,0 +1,10 @@
+.git
+.venv
+venv
+__pycache__
+*.pyc
+hydrax_out
+corpus
+frontend/node_modules
+frontend/dist
+.env
