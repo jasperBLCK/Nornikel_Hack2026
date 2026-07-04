@@ -16,8 +16,8 @@ LLM вызывается **только на запрос пользовател
 Требуется только **Docker** (Docker Desktop на Windows/Mac или docker + compose plugin на Linux).
 
 ```bash
-# 1. Положить документы (PDF/DOCX/XLSX/TXT, ZIP/RAR) в ./corpus
-mkdir -p corpus && cp /путь/к/документам/* corpus/
+# 1. Положить документы (PDF/DOCX/XLSX/TXT, ZIP/RAR) в ./corpus 
+mkdir -p corpus && cp /путь/к/документам/* corpus/ ----- в случае если нету hydrax_out ( а он есть его надо закинуть в корень и просто запустить докер) в докере надо вручную так же запустить app и подождать минут 3 пока данные не погружатся.
 
 # 2. Поднять весь стек
 docker compose up -d --build
